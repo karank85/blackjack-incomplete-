@@ -1,5 +1,4 @@
 import pygame
-from pygame_functions import *
 import os
 import random
 
@@ -90,9 +89,7 @@ def draw_window(cards, first_total, second_total):
 
 
     pygame.display.update()
-    WORD_BOX = makeTextBox(0, 0, 300, 0, "Please enter a number: ", 0, 22)
-    showTextBox(WORD_BOX)
-    entry = textBoxInput(WORD_BOX)
+
 
 
 #def random_card(no_samples):
