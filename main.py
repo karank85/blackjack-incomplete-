@@ -1,160 +1,173 @@
 import pygame
+from pygame_functions import *
 import os
+import random
+
+program_icon = pygame.image.load(os.path.join("Assets", "blackjack.jpg"))
+
+pygame.display.set_icon(program_icon)
 
 pygame.font.init()
-pygame.mixer.init()
 
-WIDTH, HEIGHT = 800, 400
-SPACESHIP_WIDTH, SPACESHIP_HEIGHT = 55, 40
-WINDOW = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("First game ever")
 
-WHITE = (255, 255, 255)
+class Player:
+    def __init__(self, name):
+        self.balance = 1000
+        self.cards = []
+
+    def add_card(self, other):
+        self.cards.append(other)
+        return None
+
+    def placeBet(self, x):
+        self.balance -= x
+
+    def returnBalance(self):
+        return self.balance
+
+    def returnCards(self):
+        return self.cards
+
+
+WIDTH, HEIGHT = 800, 600
+
 BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
 RED = (255, 0, 0)
-YELLOW = (255, 255, 0)
 
-BORDER = pygame.Rect(WIDTH // 2 - 5, 0, 10, HEIGHT)
+CARD_WIDTH, CARD_HEIGHT = 100, 200
+VALUE_FONT = pygame.font.SysFont("comicsans", 20)
+WINNER_FONT = pygame.font.SysFont("comicsans", 100)
 
-BULLET_HIT_SOUND = pygame.mixer.Sound("Assets/Grenade+1.mp3")
-BULLET_FIRE_SOUND = pygame.mixer.Sound('Assets/Gun+Silencer.mp3')
+VALUE_DICT = {
+    "1": 1,
+    "2": 2,
+    "3": 3,
+    "4": 4,
+    "5": 5,
+    "6": 6,
+    "7": 7,
+    "8": 8,
+    "9": 9,
+    "10": 10,
+    "J": 10,
+    "K": 10,
+    "Q": 10,
+}
 
-HEALTH_FONT = pygame.font.SysFont('comicsans', 40)
-WINNER_FONT = pygame.font.SysFont('comicsans', 100)
+
+def all_hands():
+    suit = {"S", "H", "D", "C"}
+    rank = {"A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"}
+    ans_dct = dict()
+    for suits in suit:
+        for ranks in rank:
+            tup = (ranks, suits)
+            ans_dct[tup] = pygame.transform.scale(pygame.image.load(os.path.join("Assets", f"{ranks}{suits}.png")),
+                                                  (CARD_WIDTH, CARD_HEIGHT))
+    return ans_dct
+
+
+BACKGROUND_IMG = pygame.transform.scale(pygame.image.load(os.path.join('Assets', 'unnamed.jpg')), (WIDTH, HEIGHT))
+WINDOW = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("BlackJack (In development stage)")
 
 FPS = 60
-VEL = 5
-BULLET_VEL = 7
-MAX_BULLETS = 3
 
-YELLOW_HIT = pygame.USEREVENT + 1
-RED_HIT = pygame.USEREVENT + 2
 
-YELLOW_SPACESHIP_IMAGE = pygame.image.load(os.path.join('Assets', 'spaceship_yellow.png'))
-YELLOW_SPACESHIP = pygame.transform.rotate(
-    pygame.transform.scale(YELLOW_SPACESHIP_IMAGE, (SPACESHIP_WIDTH, SPACESHIP_HEIGHT)), 90)
-RED_SPACESHIP_IMAGE = pygame.image.load(os.path.join('Assets', 'spaceship_red.png'))
-RED_SPACESHIP = pygame.transform.rotate(
-    pygame.transform.scale(RED_SPACESHIP_IMAGE, (SPACESHIP_WIDTH, SPACESHIP_HEIGHT)), 270)
-SPACE = pygame.transform.scale(pygame.image.load(os.path.join('Assets', 'space.png')), (WIDTH, HEIGHT))
+def draw_window(cards, first_total, second_total):
+    WINDOW.blit(BACKGROUND_IMG, (0, 0))
+    WIDTH_DISPLAY = WIDTH // 2
+    HEIGHT_DISPLAY = HEIGHT // 2
+    for card in cards:
+        WINDOW.blit(card, (WIDTH_DISPLAY, HEIGHT_DISPLAY))
+        WIDTH_DISPLAY += 30
+        HEIGHT_DISPLAY -= 30
+
+    VALUE_TEXT = VALUE_FONT.render(f"Value: {first_total}/{second_total}", 1, WHITE)
+    WINDOW.blit(VALUE_TEXT, (WIDTH_DISPLAY, HEIGHT_DISPLAY + 10))
+
+
+
+    pygame.display.update()
+    WORD_BOX = makeTextBox(0, 0, 300, 0, "Please enter a number: ", 0, 22)
+    showTextBox(WORD_BOX)
+    entry = textBoxInput(WORD_BOX)
+
+
+#def random_card(no_samples):
+#    card_keys = list(ALL_CARDS.keys())
+#    random_index = random.sample(card_keys, no_samples)
+#    ans_lst = []
+#    for index in random_index:
+#        ans_lst.append(index)
+#    return ans_lst
 
 
 def draw_winner(text):
-    draw_text = WINNER_FONT.render(text, 1, WHITE)
+    draw_text = WINNER_FONT.render(text, 1, RED)
     WINDOW.blit(draw_text, (WIDTH // 2 - draw_text.get_width() // 2, HEIGHT // 2 - draw_text.get_height() // 2))
     pygame.display.update()
-    pygame.time.delay(5000)
-
-
-def draw_window(red, yellow, red_bullets, yellow_bullets, red_health, yellow_health):
-    WINDOW.blit(SPACE, (0, 0))
-    pygame.draw.rect(WINDOW, BLACK, BORDER)
-
-    red_health_text = HEALTH_FONT.render("Health: " + str(red_health), 1, WHITE)
-    yellow_health_text = HEALTH_FONT.render("Health: " + str(yellow_health), 1, WHITE)
-    WINDOW.blit(red_health_text, (WIDTH - red_health_text.get_width() - 10, 10))
-    WINDOW.blit(yellow_health_text, (10, 10))
-
-    WINDOW.blit(YELLOW_SPACESHIP, (yellow.x, yellow.y))
-    WINDOW.blit(RED_SPACESHIP, (red.x, red.y))
-
-    for bullet in red_bullets:
-        pygame.draw.rect(WINDOW, RED, bullet)
-
-    for bullet in yellow_bullets:
-        pygame.draw.rect(WINDOW, YELLOW, bullet)
-
-    pygame.display.update()
-
-
-def yellow_handle_movement(keys_pressed, yellow):
-    if keys_pressed[pygame.K_a] and yellow.x - VEL > 0:
-        yellow.x -= VEL
-    if keys_pressed[pygame.K_d] and yellow.x + VEL + yellow.width <= BORDER.x:
-        yellow.x += VEL
-    if keys_pressed[pygame.K_w] and yellow.y - VEL > 0:
-        yellow.y -= VEL
-    if keys_pressed[pygame.K_s] and yellow.y + VEL + yellow.height < HEIGHT - 5:
-        yellow.y += VEL
-
-
-def red_handle_movement(keys_pressed, red):
-    if keys_pressed[pygame.K_LEFT] and red.x - VEL >= BORDER.x + BORDER.width:
-        red.x -= VEL
-    if keys_pressed[pygame.K_RIGHT] and red.x + VEL + red.width < WIDTH:
-        red.x += VEL
-    if keys_pressed[pygame.K_UP] and red.y - VEL > 0:
-        red.y -= VEL
-    if keys_pressed[pygame.K_DOWN] and red.height + VEL + red.y < HEIGHT - 5:
-        red.y += VEL
-
-
-def handle_bullets(yellow_bullets, red_bullets, yellow, red):
-    for bullet in yellow_bullets:
-        bullet.x += BULLET_VEL
-        if red.colliderect(bullet):
-            pygame.event.post(pygame.event.Event(RED_HIT))
-            yellow_bullets.remove(bullet)
-        elif bullet.x + bullet.width > WIDTH:
-            yellow_bullets.remove(bullet)
-    for bullet in red_bullets:
-        bullet.x -= BULLET_VEL
-        if yellow.colliderect(bullet):
-            pygame.event.post(pygame.event.Event(YELLOW_HIT))
-            red_bullets.remove(bullet)
-        elif bullet.x < 0:
-            red_bullets.remove(bullet)
+    pygame.time.delay(1000)
 
 
 def main():
-    red = pygame.Rect(700, 300, SPACESHIP_WIDTH, SPACESHIP_HEIGHT)
-    yellow = pygame.Rect(100, 300, SPACESHIP_WIDTH, SPACESHIP_HEIGHT)
-
-    red_bullets = []
-    yellow_bullets = []
-
-    red_health = 10
-    yellow_health = 10
-
+    ALL_CARDS = all_hands()
     clock = pygame.time.Clock()
+    total = 0
+    new_total = 0
     run = True
+    hand_cards = []
+    card_keys = list(ALL_CARDS.keys())
+    random_index = random.sample(card_keys, 2)
+    selected_card1 = random_index[0]
+    selected_card2 = random_index[1]
+    if "A" not in selected_card1[0] and "A" not in selected_card2[0]:
+        total += VALUE_DICT[selected_card1[0]] + VALUE_DICT[selected_card2[0]]
+        new_total += VALUE_DICT[selected_card1[0]] + VALUE_DICT[selected_card2[0]]
+    elif "A" in selected_card1[0] and "A" not in selected_card2[0]:
+        total += 11 + VALUE_DICT[selected_card2[0]]
+        new_total += 1 + VALUE_DICT[selected_card2[0]]
+    else:
+        total += VALUE_DICT[selected_card1[0]] + 11
+        new_total += 1 + VALUE_DICT[selected_card1[0]]
+
+    hand_cards.append(ALL_CARDS[selected_card1])
+    del ALL_CARDS[selected_card1]
+    hand_cards.append(ALL_CARDS[selected_card2])
+    del ALL_CARDS[selected_card2]
+
     while run:
         clock.tick(FPS)
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
                 pygame.quit()
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_LCTRL and len(yellow_bullets) < MAX_BULLETS:
-                    bullet = pygame.Rect(yellow.x + yellow.width, yellow.y + yellow.height // 2 - 2, 10, 5)
-                    yellow_bullets.append(bullet)
-                    BULLET_FIRE_SOUND.play()
-                if event.key == pygame.K_RCTRL and len(red_bullets) < MAX_BULLETS:
-                    bullet = pygame.Rect(red.x, red.y + red.height // 2 - 2, 10, 5)
-                    red_bullets.append(bullet)
-                    BULLET_FIRE_SOUND.play()
-            if event.type == RED_HIT:
-                red_health -= 1
-                BULLET_HIT_SOUND.play()
-            if event.type == YELLOW_HIT:
-                yellow_health -= 1
-                BULLET_HIT_SOUND.play()
-        winner_text = ""
-        if red_health <= 0:
-            winner_text = "Yellow Wins!"
-        if yellow_health <= 0:
-            winner_text = "Red Wins!"
-        if winner_text != '':
-            draw_winner(winner_text)
+                keys_pressed = pygame.key.get_pressed()
+                if keys_pressed[pygame.K_SPACE]:
+                    card_keys = list(ALL_CARDS.keys())
+                    random_index = random.sample(card_keys, 1)
+                    selected_card = random_index[0]
+                    hand_cards.append(ALL_CARDS[selected_card])
+                    if "A" not in selected_card[0]:
+                        total += VALUE_DICT[selected_card[0]]
+                        new_total += VALUE_DICT[selected_card[0]]
+                    else:
+                        total += 11
+                        new_total += 1
+                    del ALL_CARDS[selected_card]
+                if keys_pressed[pygame.K_r]:
+                    main()
+
+        draw_window(hand_cards, total, new_total)
+        if total > 21 and new_total > 21:
+            draw_winner("Dealer won!")
             break
-
-        keys_pressed = pygame.key.get_pressed()
-        yellow_handle_movement(keys_pressed, yellow)
-
-        handle_bullets(yellow_bullets, red_bullets, yellow, red)
-        red_handle_movement(keys_pressed, red)
-
-        draw_window(red, yellow, red_bullets, yellow_bullets, red_health, yellow_health)
+        elif total == 21 or new_total == 21:
+            draw_winner("You won!")
+            break
 
     main()
 
