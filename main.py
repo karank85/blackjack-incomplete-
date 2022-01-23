@@ -92,15 +92,6 @@ def draw_window(cards, first_total, second_total):
 
 
 
-#def random_card(no_samples):
-#    card_keys = list(ALL_CARDS.keys())
-#    random_index = random.sample(card_keys, no_samples)
-#    ans_lst = []
-#    for index in random_index:
-#        ans_lst.append(index)
-#    return ans_lst
-
-
 def draw_winner(text):
     draw_text = WINNER_FONT.render(text, 1, RED)
     WINDOW.blit(draw_text, (WIDTH // 2 - draw_text.get_width() // 2, HEIGHT // 2 - draw_text.get_height() // 2))
